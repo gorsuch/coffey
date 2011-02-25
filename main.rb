@@ -6,7 +6,14 @@ configure do
   set :path_posts_new, '/posts/new'
   set :path_posts_create, '/posts/create'
   
-  set :db, Mongo::Connection.new("localhost").db("coffeydev")
+  if ENV['MONGOHQ_URL']
+    uri = URI.parse(ENV['MONGOHQ_URL'])
+    conn = Mongo::Connection.from_uri(ENV['MONGOHQ_URL'])
+    set :db, conn.db(uri.path.gsub(/^\//, ''))  
+  else
+    set :db, Mongo::Connection.new("localhost").db("coffeydev")  
+  end
+  
   set :posts, settings.db["posts"]
 end
 
