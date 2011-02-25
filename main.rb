@@ -1,33 +1,30 @@
 require 'sinatra'
-require 'sequel'
-
-$LOAD_PATH.unshift(File.dirname(__FILE__) + '/lib')
+require 'mongo'
 
 configure do
   set :path_root, '/'
   set :path_posts_new, '/posts/new'
   set :path_posts_create, '/posts/create'
   
-  set :database, Sequel.connect(ENV['DATABASE_URL'] || 'sqlite://coffey.db')    
+  set :db, Mongo::Connection.new("localhost").db("coffeydev")
+  set :posts, settings.db["posts"]
 end
 
-require 'post'
-
 get settings.path_root do
-  @posts = Post.reverse_order(:created_at)
+  @posts = settings.posts.find.limit(10).sort(:created_at, :descending).map {|m| m}
   erb :index
 end
 
 get settings.path_posts_new do
-  erb :edit, :locals => { :post => Post.new, :url => settings.path_posts_create }
+  erb :edit, :locals => { :post => {}, :url => settings.path_posts_create }
 end
 
 post settings.path_posts_create do
-  post = Post.new(
-    :title => params[:title],
-    :body => params[:body],
-    :created_at => DateTime.now
-  )
-  post.save
+  post = {
+    "title" => params[:title],
+    "body" => params[:body],
+    "created_at" => Time.now
+  }
+  settings.posts.insert(post)
   redirect settings.path_root
 end
